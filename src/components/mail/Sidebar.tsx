@@ -1,27 +1,8 @@
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Archive,
-  CalendarClock,
-  ChevronsLeft,
-  ChevronsRight,
-  Clock3,
-  FileText,
-  Hash,
-  Inbox,
-  Lock,
-  Mail,
-  Pencil,
-  Plus,
-  ReceiptText,
-  Send,
-  SendHorizontal,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Trash2,
-  Users,
-  type LucideIcon,
+  Inbox, Star, FileText, Send, ShieldAlert, Archive, Trash2,
+  Hash, Plus, ChevronsLeft, ChevronsRight, Sparkles, Pencil, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MailFolder } from "./data";
@@ -57,26 +38,22 @@ const storageItems: SidebarItem[] = [
   { key: "trash", label: "Trash", icon: Trash2 },
 ];
 
-const sections: { title?: string; items: SidebarItem[] }[] = [
-  { items: mailItems },
-  { title: "Protocol", items: protocolItems },
-  { title: "Delivery", items: deliveryItems },
-  { title: "Storage", items: storageItems },
-];
-
-const customFolders = [
+const defaultFolders = [
   { name: "Clients", color: "oklch(0.85 0.005 270)" },
   { name: "Investors", color: "oklch(0.75 0.005 270)" },
   { name: "Personal", color: "oklch(0.65 0.005 270)" },
 ];
 
+const folderColors = [
+  "oklch(0.85 0.005 270)",
+  "oklch(0.75 0.005 270)",
+  "oklch(0.65 0.005 270)",
+  "oklch(0.80 0.02 200)",
+  "oklch(0.80 0.02 150)",
+];
+
 export function Sidebar({
-  active,
-  counts,
-  onSelect,
-  collapsed,
-  onToggle,
-  onCompose,
+  active, onSelect, collapsed, onToggle, onCompose, customFolder, onSelectCustomFolder,
 }: {
   active: MailFolder;
   counts: Partial<Record<MailFolder, number>>;
@@ -84,7 +61,28 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
   onCompose: () => void;
+  customFolder?: string | null;
+  onSelectCustomFolder?: (name: string | null) => void;
 }) {
+  const [folders, setFolders] = useState(defaultFolders);
+  const [isAddingFolder, setIsAddingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAddingFolder && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isAddingFolder]);
+
+  const handleAddFolder = () => {
+    if (newFolderName.trim()) {
+      const color = folderColors[folders.length % folderColors.length];
+      setFolders([...folders, { name: newFolderName.trim(), color }]);
+      setNewFolderName("");
+      setIsAddingFolder(false);
+    }
+  };
   return (
     <motion.aside
       initial={false}
@@ -161,20 +159,72 @@ export function Sidebar({
         {!collapsed && (
           <>
             <div className="mt-6 mb-2 flex items-center justify-between px-3">
-              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Labels</span>
-              <button className="rounded p-1 text-muted-foreground transition hover:bg-white/5 hover:text-foreground">
+              <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Folders</span>
+              <button 
+                onClick={() => setIsAddingFolder(true)}
+                className="rounded p-1 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
+              >
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
+            
+            {/* Add folder input */}
+            <AnimatePresence>
+              {isAddingFolder && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-2 overflow-hidden px-3"
+                >
+                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                    <input
+                      ref={inputRef}
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddFolder();
+                        if (e.key === "Escape") {
+                          setIsAddingFolder(false);
+                          setNewFolderName("");
+                        }
+                      }}
+                      placeholder="Folder name"
+                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        setIsAddingFolder(false);
+                        setNewFolderName("");
+                      }}
+                      className="rounded p-0.5 text-muted-foreground transition hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
             <ul className="space-y-0.5">
-              {customFolders.map((f) => (
-                <li key={f.name}>
-                  <button className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition hover:bg-white/[0.04] hover:text-foreground">
-                    <Hash className="h-3.5 w-3.5" style={{ color: f.color }} />
-                    <span>{f.name}</span>
-                  </button>
-                </li>
-              ))}
+              {folders.map((f) => {
+                const isCustomActive = customFolder === f.name;
+                return (
+                  <li key={f.name}>
+                    <button 
+                      onClick={() => onSelectCustomFolder?.(isCustomActive ? null : f.name)}
+                      className={cn(
+                        "group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/[0.04] hover:text-foreground",
+                        isCustomActive ? "bg-white/[0.06] text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      <Hash className="h-3.5 w-3.5" style={{ color: f.color }} />
+                      <span>{f.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}

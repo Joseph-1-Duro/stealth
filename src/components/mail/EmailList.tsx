@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { getEmailsForFolder, getFolderLabel, type Email, type MailFolder } from "./data";
 import { cn } from "@/lib/utils";
+
+type FilterTab = "all" | "unread" | "flagged";
 
 export function EmailList({
   emails,
@@ -13,8 +16,15 @@ export function EmailList({
   onSelect: (id: string) => void;
   folder: MailFolder;
 }) {
-  const filtered = getEmailsForFolder(emails, folder);
-  const folderLabel = getFolderLabel(folder);
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  
+  const filtered = emails
+    .filter((e) => folder === "starred" ? e.starred : e.folder === folder || folder === "inbox")
+    .filter((e) => {
+      if (activeTab === "unread") return e.unread;
+      if (activeTab === "flagged") return e.starred;
+      return true;
+    });
 
   return (
     <section className="mail-list-atmosphere relative m-3 flex h-[calc(100vh-3.5rem-1.5rem)] w-full flex-col overflow-hidden rounded-lg md:w-[328px] md:shrink-0 lg:w-[336px]">
@@ -23,13 +33,14 @@ export function EmailList({
           <h2 className="text-[13px] font-semibold leading-5 tracking-normal text-foreground">{folderLabel}</h2>
           <p className="text-[11px] leading-4 text-muted-foreground">{filtered.length} conversations</p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] p-0.5 text-[11px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          {["All", "Unread", "Flagged"].map((t, i) => (
+        <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-white/[0.03] p-0.5 text-[11px]">
+          {(["all", "unread", "flagged"] as const).map((t) => (
             <button
               key={t}
+              onClick={() => setActiveTab(t)}
               className={cn(
-                "rounded-md px-2.5 py-1 transition",
-                i === 0 ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
+                "rounded-md px-2.5 py-1 transition capitalize",
+                activeTab === t ? "bg-white/[0.08] text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t}

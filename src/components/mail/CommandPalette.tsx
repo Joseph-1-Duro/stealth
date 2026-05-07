@@ -2,18 +2,32 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, Inbox, Mail, Pencil, Search, Send, Settings, ShieldCheck, Star } from "lucide-react";
 
-const items = [
-  { icon: Pencil, label: "Compose new message", hint: "Ctrl+N" },
-  { icon: Inbox, label: "Go to Inbox", hint: "G I" },
-  { icon: Mail, label: "Go to All Mail", hint: "G A" },
-  { icon: ShieldCheck, label: "Go to Verified", hint: "G V" },
-  { icon: Star, label: "Go to Starred", hint: "G S" },
-  { icon: Send, label: "Go to Sent", hint: "G T" },
-  { icon: Archive, label: "Archive thread", hint: "E" },
-  { icon: Settings, label: "Open settings", hint: "," },
+type CommandItem = {
+  icon: any;
+  label: string;
+  hint: string;
+  action: string;
+};
+
+const items: CommandItem[] = [
+  { icon: Pencil, label: "Compose new email", hint: "⌘N", action: "compose" },
+  { icon: Inbox, label: "Go to Inbox", hint: "G I", action: "inbox" },
+  { icon: Star, label: "Go to Starred", hint: "G S", action: "starred" },
+  { icon: Send, label: "Go to Sent", hint: "G T", action: "sent" },
+  { icon: Archive, label: "Archive thread", hint: "E", action: "archive" },
+  { icon: Settings, label: "Open settings", hint: ",", action: "settings" },
 ];
 
-export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+type CommandPaletteProps = {
+  open: boolean;
+  onClose: () => void;
+  onCompose?: () => void;
+  onNavigate?: (folder: string) => void;
+  onArchive?: () => void;
+  onOpenSettings?: () => void;
+};
+
+export function CommandPalette({ open, onClose, onCompose, onNavigate, onArchive, onOpenSettings }: CommandPaletteProps) {
   const [q, setQ] = useState("");
 
   useEffect(() => {
@@ -64,7 +78,28 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             <ul className="max-h-80 overflow-y-auto p-2">
               {filtered.map((it) => (
                 <li key={it.label}>
-                  <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition hover:bg-white/[0.06]">
+                  <button 
+                    onClick={() => {
+                      onClose();
+                      switch (it.action) {
+                        case "compose":
+                          onCompose?.();
+                          break;
+                        case "inbox":
+                        case "starred":
+                        case "sent":
+                          onNavigate?.(it.action);
+                          break;
+                        case "archive":
+                          onArchive?.();
+                          break;
+                        case "settings":
+                          onOpenSettings?.();
+                          break;
+                      }
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition hover:bg-white/[0.06]"
+                  >
                     <it.icon className="h-4 w-4 text-muted-foreground" />
                     <span>{it.label}</span>
                     <span className="ml-auto rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">

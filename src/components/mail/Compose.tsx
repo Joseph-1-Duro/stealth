@@ -1,15 +1,124 @@
-import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Image as ImageIcon, Paperclip, Send, ShieldCheck, Smile, Sparkles, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Paperclip, Sparkles, Send, Image as ImageIcon, Smile, FileText } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { EmojiPicker } from "./EmojiPicker";
+import { cn } from "@/lib/utils";
 
-export function Compose({ open, onClose }: { open: boolean; onClose: () => void }) {
+type Attachment = {
+  name: string;
+  size: string;
+  type: "file" | "image";
+};
+
+export function Compose({ 
+  open, 
+  onClose, 
+  onShowToast 
+}: { 
+  open: boolean; 
+  onClose: () => void;
+  onShowToast?: (message: string) => void;
+}) {
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  
+  const aiSuggestion = "Confirming Friday's review at 10am — let me know if that still works for you.";
+
+  // Reset form when closing
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    if (!open) {
+      setTo("");
+      setSubject("");
+      setBody("");
+      setAttachments([]);
+      setEmojiOpen(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { 
+      if (e.key === "Escape") {
+        if (emojiOpen) {
+          setEmojiOpen(false);
+        } else {
+          onClose();
+        }
+      }
+      // Tab to insert AI suggestion
+      if (e.key === "Tab" && open && document.activeElement === textareaRef.current) {
+        e.preventDefault();
+        insertAtCursor(aiSuggestion);
+      }
     };
     if (open) window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open, onClose, emojiOpen]);
+
+  const insertAtCursor = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newValue = body.slice(0, start) + text + body.slice(end);
+    setBody(newValue);
+    
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + text.length;
+      textarea.focus();
+    }, 0);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "file" | "image") => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    const newAttachments: Attachment[] = Array.from(files).map(file => ({
+      name: file.name,
+      size: formatFileSize(file.size),
+      type,
+    }));
+    
+    setAttachments([...attachments, ...newAttachments]);
+    e.target.value = ""; // Reset input
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const handleSend = async () => {
+    if (!to.trim()) {
+      onShowToast?.("Please enter a recipient");
+      return;
+    }
+    if (!subject.trim()) {
+      onShowToast?.("Please enter a subject");
+      return;
+    }
+    
+    setIsSending(true);
+    
+    // Simulate sending
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    setIsSending(false);
+    onClose();
+    onShowToast?.("Message sent successfully");
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    insertAtCursor(emoji);
+  };
 
   return (
     <AnimatePresence>
@@ -40,45 +149,131 @@ export function Compose({ open, onClose }: { open: boolean; onClose: () => void 
               </button>
             </div>
             <div className="space-y-0 px-4">
-              <Field label="To" placeholder="recipient*stealth.xyz" />
-              <Field label="Subject" placeholder="Subject" />
+              <Field label="To" placeholder="recipients@…" value={to} onChange={setTo} />
+              <Field label="Subject" placeholder="Subject" value={subject} onChange={setSubject} />
             </div>
             <div className="px-4 pb-2">
               <textarea
+                ref={textareaRef}
                 rows={8}
-                placeholder="Write a signed message..."
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your message…"
                 className="glow-ring w-full resize-none rounded-lg border border-transparent bg-transparent px-1 py-2 text-sm placeholder:text-muted-foreground focus:border-white/10"
               />
+              
+              {/* Attachments */}
+              {attachments.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {attachments.map((att, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"
+                    >
+                      {att.type === "image" ? (
+                        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                      <span className="text-xs text-foreground">{att.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{att.size}</span>
+                      <button
+                        onClick={() => removeAttachment(i)}
+                        className="ml-1 rounded p-0.5 text-muted-foreground transition hover:bg-white/[0.08] hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* AI Suggestion */}
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
                 className="mt-2 flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-muted-foreground"
               >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Stealth will attach postage, sign with your Stellar key, and write the payload hash to memo.</span>
-                <button className="ml-auto rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] text-foreground/90 transition hover:bg-white/[0.1]">
-                  Review
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">AI suggests: &quot;{aiSuggestion}&quot;</span>
+                <button 
+                  onClick={() => insertAtCursor(aiSuggestion)}
+                  className="shrink-0 rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] text-foreground/90 transition hover:bg-white/[0.1]"
+                >
+                  Tab to insert
                 </button>
               </motion.div>
             </div>
             <div className="flex items-center gap-1 border-t border-white/5 px-3 py-2.5">
-              {[Paperclip, ImageIcon, Smile, Sparkles].map((Icon, i) => (
-                <motion.button
-                  key={i}
-                  whileTap={{ scale: 0.9 }}
-                  className="rounded-lg p-2 text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground"
+              {/* Hidden file inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => handleFileSelect(e, "file")}
+                className="hidden"
+              />
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleFileSelect(e, "image")}
+                className="hidden"
+              />
+              
+              {/* Attachment button */}
+              <motion.button 
+                whileTap={{ scale: 0.9 }} 
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-lg p-2 text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground"
+              >
+                <Paperclip className="h-4 w-4" />
+              </motion.button>
+              
+              {/* Image button */}
+              <motion.button 
+                whileTap={{ scale: 0.9 }} 
+                onClick={() => imageInputRef.current?.click()}
+                className="rounded-lg p-2 text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </motion.button>
+              
+              {/* Emoji button */}
+              <div className="relative">
+                <motion.button 
+                  whileTap={{ scale: 0.9 }} 
+                  onClick={() => setEmojiOpen(!emojiOpen)}
+                  className={cn(
+                    "rounded-lg p-2 text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground",
+                    emojiOpen && "bg-white/[0.06] text-foreground"
+                  )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Smile className="h-4 w-4" />
                 </motion.button>
-              ))}
+                <EmojiPicker 
+                  open={emojiOpen} 
+                  onClose={() => setEmojiOpen(false)} 
+                  onSelect={handleEmojiSelect}
+                />
+              </div>
+              
+              {/* Send button */}
               <motion.button
-                whileHover={{ y: -1 }}
+                whileHover={{ y: -1 }} 
                 whileTap={{ scale: 0.97 }}
-                className="ml-auto inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/[0.14]"
+                onClick={handleSend}
+                disabled={isSending}
+                className={cn(
+                  "ml-auto inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/[0.14]",
+                  isSending && "opacity-50 cursor-not-allowed"
+                )}
                 style={{ boxShadow: "0 8px 30px -10px rgba(0,0,0,0.6)" }}
               >
-                <Send className="h-3.5 w-3.5" /> Send
+                <Send className={cn("h-3.5 w-3.5", isSending && "animate-pulse")} /> 
+                {isSending ? "Sending..." : "Send"}
               </motion.button>
             </div>
           </motion.div>
@@ -88,14 +283,34 @@ export function Compose({ open, onClose }: { open: boolean; onClose: () => void 
   );
 }
 
-function Field({ label, placeholder }: { label: string; placeholder: string }) {
+function Field({ 
+  label, 
+  placeholder, 
+  value, 
+  onChange 
+}: { 
+  label: string; 
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="flex items-center gap-3 border-b border-white/5 py-2">
       <span className="w-16 shrink-0 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
-      <input
-        placeholder={placeholder}
-        className="glow-ring w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+      <input 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder} 
+        className="glow-ring w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none" 
       />
     </div>
   );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 }
