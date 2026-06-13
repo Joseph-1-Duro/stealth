@@ -287,78 +287,88 @@ export function Topbar({
             </span>
           </button>
         </div>
-        {typeof document !== "undefined" && createPortal(
-          <AnimatePresence>
-            {accountOpen && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setAccountOpen(false)}
-                  className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xl"
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                  style={{
-                    position: "fixed",
-                    top: accountRect ? accountRect.bottom + 8 : 64,
-                    right: accountRect ? Math.max(8, window.innerWidth - accountRect.right) : 12,
-                    width: 224,
-                    zIndex: 110,
-                  }}
-                  className="glass-modal overflow-hidden rounded-xl"
-                >
-                  {/* Account info */}
-                  <div className="border-b border-white/5 p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#4d5560] to-[#232326] flex items-center justify-center">
-                        <span className="text-sm font-medium text-white/90">EN</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">Eve Navarro</p>
-                        <p className="truncate text-xs text-muted-foreground">eve@aether.app</p>
+        {typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {accountOpen && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setAccountOpen(false)}
+                    className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xl"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                    style={{
+                      position: "fixed",
+                      top: accountRect ? accountRect.bottom + 8 : 64,
+                      right: accountRect ? Math.max(8, window.innerWidth - accountRect.right) : 12,
+                      width: 224,
+                      zIndex: 110,
+                    }}
+                    className="glass-modal overflow-hidden rounded-xl"
+                  >
+                    {/* Account info */}
+                    <div className="border-b border-white/5 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#4d5560] to-[#232326] flex items-center justify-center">
+                          <span className="text-sm font-medium text-white/90">EN</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {account === "personal" ? "Eve Navarro" : "Stealth Protocol"}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {account === "personal" ? "eve*stealth.xyz" : "team*stealth.network"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Menu items */}
-                  <div className="p-1">
-                    <AccountMenuItem
-                      icon={User}
-                      label="Profile"
-                      onClick={() => {
-                        setAccountOpen(false);
-                        onOpenSettings();
-                      }}
-                    />
-                    <AccountMenuItem
-                      icon={RefreshCw}
-                      label="Switch account"
-                      onClick={() => {
-                        setAccountOpen(false);
-                        onShowToast("Account switching coming soon");
-                      }}
-                    />
-                    <div className="my-1 border-t border-white/5" />
-                    <AccountMenuItem
-                      icon={LogOut}
-                      label="Sign out"
-                      onClick={() => {
-                        setAccountOpen(false);
-                        onShowToast("Signed out successfully");
-                      }}
-                    />
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
+                    {/* Menu items */}
+                    <div className="p-1">
+                      <AccountMenuItem
+                        icon={User}
+                        label="Profile"
+                        onClick={() => {
+                          setAccountOpen(false);
+                          onOpenSettings();
+                        }}
+                      />
+                      <AccountMenuItem
+                        icon={RefreshCw}
+                        label="Switch account"
+                        onClick={() => {
+                          setAccountOpen(false);
+                          setAccount((current) =>
+                            current === "personal" ? "protocol" : "personal",
+                          );
+                          onShowToast(
+                            `Switched to ${account === "personal" ? "Protocol" : "Personal"} mailbox`,
+                          );
+                        }}
+                      />
+                      <div className="my-1 border-t border-white/5" />
+                      <AccountMenuItem
+                        icon={LogOut}
+                        label="Sign out"
+                        onClick={() => {
+                          setAccountOpen(false);
+                          onShowToast("Signed out successfully");
+                        }}
+                      />
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>,
+            document.body,
+          )}
       </div>
 
       <AnimatePresence>
