@@ -2,9 +2,9 @@ import { motion } from "framer-motion";
 import { Sparkles, Calendar, Paperclip, User, ArrowUpRight, Send } from "lucide-react";
 import type { Email } from "./data";
 
-export function RightPanel({ email }: { email: Email | null }) {
+export function RightPanel({ email, onShowToast }: { email: Email | null; onShowToast: (message: string) => void }) {
   return (
-    <aside className="scrollbar-thin m-3 ml-0 hidden h-[calc(100vh-1.5rem-3.5rem-0.75rem)] w-[320px] shrink-0 flex-col gap-3 overflow-y-auto xl:flex">
+    <aside className="scrollbar-thin m-3 ml-0 hidden h-[calc(100vh-1.5rem-3.5rem)] w-[292px] shrink-0 flex-col gap-3 overflow-y-auto 2xl:flex">
       {/* AI Assistant */}
       <Card>
         <SectionHeader icon={Sparkles} title="AI assistant" badge="beta" />
@@ -33,6 +33,7 @@ export function RightPanel({ email }: { email: Email | null }) {
               key={a}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
+              onClick={() => onShowToast(`${a} action applied`)}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-foreground/90 transition hover:bg-white/[0.08]"
             >
               {a}
