@@ -40,7 +40,43 @@ export type Email = {
   event?: MailEvent;
 };
 
-export const mailFolders: { key: MailFolder; label: string; group: "mail" | "protocol" | "delivery" | "storage" }[] = [
+export type MailFilters = {
+  unreadOnly: boolean;
+  hasAttachments: boolean;
+  dateRange: "all" | "today" | "week" | "month";
+};
+
+export const defaultMailFilters: MailFilters = {
+  unreadOnly: false,
+  hasAttachments: false,
+  dateRange: "all",
+};
+
+export function applyMailFilters(allEmails: Email[], filters: MailFilters) {
+  return allEmails.filter((email) => {
+    if (filters.unreadOnly && !email.unread) return false;
+    if (filters.hasAttachments && !email.attachments?.length) return false;
+    if (
+      filters.dateRange === "today" &&
+      !["Now", "Just now"].some((value) => email.time.includes(value)) &&
+      !email.time.includes("AM") &&
+      !email.time.includes("PM")
+    )
+      return false;
+    if (
+      filters.dateRange === "week" &&
+      /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(email.time)
+    )
+      return false;
+    return true;
+  });
+}
+
+export const mailFolders: {
+  key: MailFolder;
+  label: string;
+  group: "mail" | "protocol" | "delivery" | "storage";
+}[] = [
   { key: "all", label: "All Mail", group: "mail" },
   { key: "inbox", label: "Inbox", group: "mail" },
   { key: "priority", label: "Priority", group: "mail" },
@@ -60,7 +96,14 @@ export const mailFolders: { key: MailFolder; label: string; group: "mail" | "pro
   { key: "trash", label: "Trash", group: "storage" },
 ];
 
-const inboxLocations = new Set<MailLocation>(["inbox", "priority", "verified", "pending", "requests", "encrypted"]);
+const inboxLocations = new Set<MailLocation>([
+  "inbox",
+  "priority",
+  "verified",
+  "pending",
+  "requests",
+  "encrypted",
+]);
 
 export function getFolderLabel(folder: MailFolder) {
   return mailFolders.find((item) => item.key === folder)?.label ?? folder;
