@@ -23,6 +23,6 @@ export const defaultPreferences: UiPreferences = {
   sound: false,
   unknownSenders: "request",
   minimumPostage: "0.0001",
-  onboardingCompleted: false,
+  onboardingCompleted: true,
   receiptOnDelivery: false,
 };
