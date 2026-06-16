@@ -1,3 +1,30 @@
+
+export type AdminDashboardBreakpoint = "tablet" | "laptop" | "desktop";
+
+export type AdminDashboardPanel = {
+  id: string;
+  title: string;
+  description: string;
+  status: "ready" | "needs-review" | "draft";
+  demoRecords: number;
+};
+
+export type AdminDashboardWidthNote = {
+  breakpoint: AdminDashboardBreakpoint;
+  minWidth: number;
+  maxWidth?: number;
+  columns: number;
+  sidebarMode: "stacked" | "rail" | "expanded";
+  note: string;
+};
+
+export type AdminDashboardLayoutCheck = {
+  id: string;
+  label: string;
+  breakpoint: AdminDashboardBreakpoint;
+  expected: string;
+};
+
 /**
  * Types for the Demo Admin Dashboard feature shell.
  *
@@ -16,12 +43,7 @@ export interface DashboardNavItem {
 }
 
 /** The available top-level sections in the admin dashboard. */
-export type DashboardSection =
-  | "overview"
-  | "accounts"
-  | "mail"
-  | "audit"
-  | "analytics";
+export type DashboardSection = "overview" | "accounts" | "mail" | "templates" | "audit";
 
 /** Props passed to the dashboard shell. */
 export interface DemoAdminDashboardProps {
@@ -36,3 +58,4 @@ export interface StatCard {
   /** Optional comparison indicator (e.g., "+12%"). */
   delta?: string;
 }
+
