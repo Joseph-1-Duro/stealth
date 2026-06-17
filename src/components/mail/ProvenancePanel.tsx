@@ -20,10 +20,7 @@ import {
   getEmailProvenance,
   type ProvenanceDetails,
   type ProvenanceItemDetails,
-<<<<<<< HEAD
-=======
   type ProvenanceTimelineItem,
->>>>>>> 4223141 (feat(mail): add proof timeline to message provenance panel)
 } from "./provenance";
 import { ProvenanceInspector } from "./ProvenanceInspector";
 import type { Email } from "./data";
