@@ -7,30 +7,44 @@ import { cn } from "@/lib/utils";
 
 type ResizablePanelGroupProps = Omit<
   React.ComponentProps<typeof Group>,
-  "orientation" | "onLayoutChange"
+  "orientation" | "onLayoutChange" | "onLayoutChanged"
 > & {
   direction?: "horizontal" | "vertical";
   onLayout?: (sizes: number[]) => void;
+  onLayoutChanged?: (sizes: number[]) => void;
 };
 
 const ResizablePanelGroup = ({
   className,
   direction,
   onLayout,
+  onLayoutChanged,
   ...props
-}: ResizablePanelGroupProps) => (
-  <Group
-    className={cn("flex h-full w-full data-[panel-group-direction=vertical]:flex-col", className)}
-    orientation={direction}
-    onLayoutChange={(layout) => onLayout?.(Object.values(layout))}
-    {...props}
-  />
-);
+}: ResizablePanelGroupProps) => {
+  const handleLayoutChange = (layout: any) => {
+    onLayout?.(Object.values(layout));
+  };
+
+  const handleLayoutChanged = (layout: any) => {
+    onLayoutChanged?.(Object.values(layout));
+  };
+
+  return (
+    <Group
+      orientation={direction}
+      onLayoutChange={onLayout ? handleLayoutChange : undefined}
+      onLayoutChanged={onLayoutChanged ? handleLayoutChanged : undefined}
+      className={cn("flex h-full w-full data-[panel-group-direction=vertical]:flex-col", className)}
+      {...props}
+    />
+  );
+};
 
 type ResizablePanelProps = React.ComponentProps<typeof Panel> & {
   onCollapse?: () => void;
   onExpand?: () => void;
 };
+
 
 const ResizablePanel = ({
   collapsible,
