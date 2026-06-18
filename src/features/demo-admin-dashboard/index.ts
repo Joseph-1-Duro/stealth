@@ -111,3 +111,12 @@ export {
 } from "./persistence/localStorageAdapter";
 
 export { messagePool, defaultAssignmentState } from "./fixtures/assignmentFixtures";
+
+export type { AudienceSegment, AudienceSegmentId } from "./types/audienceSegment";
+export {
+  defaultAudienceSegments,
+  AUDIENCE_SEGMENTS_BY_ID,
+  audienceSegmentSnapshots,
+} from "./fixtures/audienceSegmentFixtures";
+export { getSegmentById, resolveSegmentLabel, getSegmentToken } from "./utils/segmentHelpers";
+export { AUDIENCE_SEGMENT_TOKENS } from "./constants/displayTokens";
