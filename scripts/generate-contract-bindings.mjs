@@ -50,15 +50,11 @@ function buildType(typeStr) {
   if (typeStr === "address") return xdr.ScSpecTypeDef.scSpecTypeAddress();
   if (typeStr === "string") return xdr.ScSpecTypeDef.scSpecTypeString();
   if (typeStr === "bytes32")
-    return xdr.ScSpecTypeDef.scSpecTypeBytesN(
-      new xdr.ScSpecTypeBytesN({ n: 32 })
-    );
+    return xdr.ScSpecTypeDef.scSpecTypeBytesN(new xdr.ScSpecTypeBytesN({ n: 32 }));
 
   if (typeStr.startsWith("option:")) {
     const inner = buildType(typeStr.slice(7));
-    return xdr.ScSpecTypeDef.scSpecTypeOption(
-      new xdr.ScSpecTypeOption({ valueType: inner })
-    );
+    return xdr.ScSpecTypeDef.scSpecTypeOption(new xdr.ScSpecTypeOption({ valueType: inner }));
   }
 
   if (typeStr.startsWith("result:")) {
@@ -70,17 +66,13 @@ function buildType(typeStr) {
     return xdr.ScSpecTypeDef.scSpecTypeResult(
       new xdr.ScSpecTypeResult({
         okType: buildType(okStr),
-        errorType: xdr.ScSpecTypeDef.scSpecTypeUdt(
-          new xdr.ScSpecTypeUdt({ name: errName })
-        ),
-      })
+        errorType: xdr.ScSpecTypeDef.scSpecTypeUdt(new xdr.ScSpecTypeUdt({ name: errName })),
+      }),
     );
   }
 
   if (typeStr.startsWith("udt:")) {
-    return xdr.ScSpecTypeDef.scSpecTypeUdt(
-      new xdr.ScSpecTypeUdt({ name: typeStr.slice(4) })
-    );
+    return xdr.ScSpecTypeDef.scSpecTypeUdt(new xdr.ScSpecTypeUdt({ name: typeStr.slice(4) }));
   }
 
   throw new Error(`Unknown type: ${typeStr}`);
@@ -103,10 +95,10 @@ function buildXdrEntries(spec) {
                 doc: "",
                 name: f.name,
                 type: buildType(f.type),
-              })
+              }),
           ),
-        })
-      ).toXDR("base64")
+        }),
+      ).toXDR("base64"),
     );
   }
 
@@ -123,10 +115,10 @@ function buildXdrEntries(spec) {
                 doc: "",
                 name: c.name,
                 value: c.value,
-              })
+              }),
           ),
-        })
-      ).toXDR("base64")
+        }),
+      ).toXDR("base64"),
     );
   }
 
@@ -143,17 +135,16 @@ function buildXdrEntries(spec) {
                 doc: "",
                 name: e.name,
                 value: e.value,
-              })
+              }),
           ),
-        })
-      ).toXDR("base64")
+        }),
+      ).toXDR("base64"),
     );
   }
 
   for (const fn of spec.functions ?? []) {
     const outputStr = fn.output ?? "void";
-    const outputs =
-      outputStr === "void" ? [] : [buildType(outputStr)];
+    const outputs = outputStr === "void" ? [] : [buildType(outputStr)];
     entries.push(
       xdr.ScSpecEntry.scSpecEntryFunctionV0(
         new xdr.ScSpecFunctionV0({
@@ -165,11 +156,11 @@ function buildXdrEntries(spec) {
                 doc: "",
                 name: i.name,
                 type: buildType(i.type),
-              })
+              }),
           ),
           outputs,
-        })
-      ).toXDR("base64")
+        }),
+      ).toXDR("base64"),
     );
   }
 
@@ -188,12 +179,7 @@ function tsType(typeStr) {
   if (typeStr === "void") return "void";
   if (typeStr === "bool") return "boolean";
   if (typeStr === "u32" || typeStr === "i32") return "number";
-  if (
-    typeStr === "u64" ||
-    typeStr === "i64" ||
-    typeStr === "u128" ||
-    typeStr === "i128"
-  )
+  if (typeStr === "u64" || typeStr === "i64" || typeStr === "u128" || typeStr === "i128")
     return "bigint";
   if (typeStr === "address") return "string";
   if (typeStr === "bytes32") return "Buffer";
@@ -247,9 +233,7 @@ function emitEnumType(e) {
 }
 
 function emitErrorType(errors, contractName) {
-  const cases = errors
-    .map((e) => `  ${e.name} = ${e.value},`)
-    .join("\n");
+  const cases = errors.map((e) => `  ${e.name} = ${e.value},`).join("\n");
   return `export enum ${contractName}Error {\n${cases}\n}`;
 }
 
@@ -281,9 +265,7 @@ function emitClient(spec, contractName, xdrBase64Entries) {
 
   // XDR spec entries (embedded)
   lines.push(`// Embedded XDR spec entries derived from spec.json`);
-  lines.push(
-    `const SPEC_ENTRIES: string[] = ${JSON.stringify(xdrBase64Entries, null, 2)};`
-  );
+  lines.push(`const SPEC_ENTRIES: string[] = ${JSON.stringify(xdrBase64Entries, null, 2)};`);
   lines.push(``);
 
   // Client options interface
@@ -300,15 +282,11 @@ function emitClient(spec, contractName, xdrBase64Entries) {
   if (spec.errors?.length) {
     const errName = `${pascalCase(contractName)}Error`;
     const fnName = `parse${pascalCase(contractName)}Error`;
-    lines.push(
-      `/** Map a contract error code to an actionable ${errName} variant. */`
-    );
+    lines.push(`/** Map a contract error code to an actionable ${errName} variant. */`);
     lines.push(`export function ${fnName}(`);
     lines.push(`  code: number`);
     lines.push(`): ${errName} | undefined {`);
-    lines.push(
-      `  return Object.values(${errName}).includes(code as ${errName})`
-    );
+    lines.push(`  return Object.values(${errName}).includes(code as ${errName})`);
     lines.push(`    ? (code as ${errName})`);
     lines.push(`    : undefined;`);
     lines.push(`}`);
@@ -317,9 +295,7 @@ function emitClient(spec, contractName, xdrBase64Entries) {
 
   // Factory function returning contract.Client subclass
   const className = `${pascalCase(contractName)}Client`;
-  lines.push(
-    `/** Typed Soroban contract client for the ${pascalCase(contractName)} contract. */`
-  );
+  lines.push(`/** Typed Soroban contract client for the ${pascalCase(contractName)} contract. */`);
   lines.push(`export function create${className}(`);
   lines.push(`  opts: ${pascalCase(contractName)}ClientOptions`);
   lines.push(`): contract.Client {`);
@@ -340,7 +316,9 @@ function emitClient(spec, contractName, xdrBase64Entries) {
   lines.push(`// Typed call helpers`);
   lines.push(`// These wrap contract.Client to provide typed args and return values.`);
   lines.push(`// For Result-returning methods, call .isOk() / .isErr() on the return value.`);
-  lines.push(`// Use the contract Error enum to identify specific errors via .unwrapErr().message.`);
+  lines.push(
+    `// Use the contract Error enum to identify specific errors via .unwrapErr().message.`,
+  );
   lines.push(`// ---------------------------------------------------------------------------`);
   lines.push(``);
 
@@ -358,25 +336,23 @@ function emitClient(spec, contractName, xdrBase64Entries) {
       }),
     ].join(", ");
 
-    const argsObj = fn.inputs.length
-      ? `{ ${fn.inputs.map((i) => i.name).join(", ")} }`
-      : "{}";
+    const argsObj = fn.inputs.length ? `{ ${fn.inputs.map((i) => i.name).join(", ")} }` : "{}";
 
     // Result-returning functions: the SDK returns Ok<T> | Err<{message}>
     // We use the local Result alias to avoid the constraint battle.
     if (hasResult) {
-      const ok = tsType(outputStr);  // already unwrapped via tsType which handles result:
+      const ok = tsType(outputStr); // already unwrapped via tsType which handles result:
       lines.push(`export async function ${camelCase(fn.name)}(`);
       lines.push(`  ${fullParamList}`);
-      lines.push(`): Promise<contract.Ok<${ok === "void" ? "void" : ok}> | contract.Err<{ message: string }>> {`);
+      lines.push(
+        `): Promise<contract.Ok<${ok === "void" ? "void" : ok}> | contract.Err<{ message: string }>> {`,
+      );
     } else {
       lines.push(`export async function ${camelCase(fn.name)}(`);
       lines.push(`  ${fullParamList}`);
       lines.push(`): Promise<${retType}> {`);
     }
-    lines.push(
-      `  const tx = await (client as any).${fn.name}(${argsObj});`
-    );
+    lines.push(`  const tx = await (client as any).${fn.name}(${argsObj});`);
     lines.push(`  return tx.result;`);
     lines.push(`}`);
     lines.push(``);
@@ -406,13 +382,7 @@ const OUT_DIR = join(ROOT, "src", "services", "stellar", "contracts");
 mkdirSync(OUT_DIR, { recursive: true });
 
 for (const name of CONTRACTS) {
-  const specPath = join(
-    ROOT,
-    "contracts",
-    "soroban",
-    name,
-    "spec.json"
-  );
+  const specPath = join(ROOT, "contracts", "soroban", name, "spec.json");
   const spec = JSON.parse(readFileSync(specPath, "utf8"));
   const xdrEntries = buildXdrEntries(spec);
   const code = emitClient(spec, name, xdrEntries);
@@ -422,8 +392,6 @@ for (const name of CONTRACTS) {
 }
 
 // Write barrel index
-const index = CONTRACTS.map(
-  (c) => `export * as ${camelCase(c)} from "./${c}";`
-).join("\n") + "\n";
+const index = CONTRACTS.map((c) => `export * as ${camelCase(c)} from "./${c}";`).join("\n") + "\n";
 writeFileSync(join(OUT_DIR, "index.ts"), index, "utf8");
 console.log(`Generated ${join(OUT_DIR, "index.ts")}`);
