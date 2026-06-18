@@ -50,6 +50,7 @@ export type DashboardSection =
   | "events"
   | "templates"
   | "campaigns"
+  | "timeline"
   | "audit"
   | "analytics";
 
@@ -75,6 +76,8 @@ export type PresetId =
   | "encrypted-payload"
   | "conference-pass"
   | "none";
+  | "paid-sender-request"
+  | "receipt-settlement";
 
 export interface PresetAccount {
   name: string;
