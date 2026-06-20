@@ -49,14 +49,12 @@ Do not import from `src/`, `tools/v2/`, or sibling tool folders. Do not modify t
 
 ```ts
 // Message or thread reference (exact shape undecided — see Open Questions)
-type CommentTarget =
-  | { kind: "message"; id: string }
-  | { kind: "thread"; id: string };
+type CommentTarget = { kind: "message"; id: string } | { kind: "thread"; id: string };
 
 interface InternalComment {
   id: string;
   target: CommentTarget;
-  author: string;           // Stealth address of team member
+  author: string; // Stealth address of team member
   body: string;
   createdAt: string;
   updatedAt?: string;

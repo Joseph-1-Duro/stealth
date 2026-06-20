@@ -8,11 +8,11 @@ Folder-local test strategy for the Internal Comment Thread tool.
 
 ## Test Strategy
 
-| Layer           | Scope                                                           | Framework        |
-| --------------- | --------------------------------------------------------------- | ---------------- |
-| **Unit**        | Services, storage adapters, and utility functions in isolation  | Vitest           |
+| Layer           | Scope                                                            | Framework        |
+| --------------- | ---------------------------------------------------------------- | ---------------- |
+| **Unit**        | Services, storage adapters, and utility functions in isolation   | Vitest           |
 | **Integration** | Multi-step comment workflows using the in-memory storage adapter | Vitest           |
-| **Manual**      | UI behavior, visual regression, accessibility, end-to-end flows | Review checklist |
+| **Manual**      | UI behavior, visual regression, accessibility, end-to-end flows  | Review checklist |
 
 ---
 
