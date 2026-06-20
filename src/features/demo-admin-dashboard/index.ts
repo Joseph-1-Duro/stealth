@@ -476,3 +476,21 @@ export { LabelManager } from "./labels/LabelManager";
 // Draft dataset JSON import (issue #272): JSON -> safe drafts mapper with error output.
 export { mapImportedDataset, parseDatasetImport } from "./helpers/datasetImport";
 export type { DatasetImportIssue, DatasetImportResult } from "./types/datasetImport";
+
+// Validation quick-fix framework (issue #221): one-click fixes for demo-data validation issues.
+export {
+  applyQuickFix,
+  createQuickFixRegistry,
+  defaultQuickFixRegistry,
+  quickFixKindForIssue,
+  toSafeRecipient,
+  SAFE_BODY,
+  SAFE_RECIPIENT,
+  SAFE_SUBJECT,
+} from "./helpers/quickFixRegistry";
+export type {
+  QuickFix,
+  QuickFixApplication,
+  QuickFixKind,
+  QuickFixRegistry,
+} from "./types/quickFix";
