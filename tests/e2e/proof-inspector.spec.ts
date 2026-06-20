@@ -76,6 +76,8 @@ test.describe("proof inspector", () => {
     await expect(page.getByRole("dialog", { name: "Cryptographic proof inspector" })).toBeVisible();
 
     await page.locator(".fixed.inset-0").first().click({ force: true });
-    await expect(page.getByRole("dialog", { name: "Cryptographic proof inspector" })).not.toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Cryptographic proof inspector" }),
+    ).not.toBeVisible();
   });
 });
