@@ -74,24 +74,24 @@ interface AssignmentMetrics {
 
 ### Errors
 
-| Error | Condition | Shape |
-| --- | --- | --- |
-| Thread not found | Invalid `threadId` | `Error: Thread {id} not found.` |
-| Agent not found | Invalid `agentId` | `Error: Agent {id} not found.` |
-| Thread resolved | Assign to resolved thread | `Error: Thread {id} is already resolved.` |
+| Error            | Condition                         | Shape                                               |
+| ---------------- | --------------------------------- | --------------------------------------------------- |
+| Thread not found | Invalid `threadId`                | `Error: Thread {id} not found.`                     |
+| Agent not found  | Invalid `agentId`                 | `Error: Agent {id} not found.`                      |
+| Thread resolved  | Assign to resolved thread         | `Error: Thread {id} is already resolved.`           |
 | No active agents | Auto-assign with no active agents | `Error: No active agents available for assignment.` |
 
 ## Service Operations
 
-| Operation | Input | Output | Error |
-| --- | --- | --- | --- |
-| `assignAgent` | `threadId`, `agentId`, `operator?` | `Thread` | Thread/Agent not found, resolved thread |
-| `unassignAgent` | `threadId`, `agentId`, `operator?` | `Thread` | Thread/Agent not found |
-| `updateAgentStatus` | `agentId`, `status` | `Agent` | Agent not found |
-| `resolveThread` | `threadId`, `operator?` | `Thread` | Thread not found |
-| `autoAssign` | `threadId` | `Thread` | Thread not found, resolved, no active agents |
-| `simulateIncomingThread` | `subject`, `snippet`, `sender`, `priority`, `category?` | `Thread` | — |
-| `getMetrics` | — | `AssignmentMetrics` | — |
+| Operation                | Input                                                   | Output              | Error                                        |
+| ------------------------ | ------------------------------------------------------- | ------------------- | -------------------------------------------- |
+| `assignAgent`            | `threadId`, `agentId`, `operator?`                      | `Thread`            | Thread/Agent not found, resolved thread      |
+| `unassignAgent`          | `threadId`, `agentId`, `operator?`                      | `Thread`            | Thread/Agent not found                       |
+| `updateAgentStatus`      | `agentId`, `status`                                     | `Agent`             | Agent not found                              |
+| `resolveThread`          | `threadId`, `operator?`                                 | `Thread`            | Thread not found                             |
+| `autoAssign`             | `threadId`                                              | `Thread`            | Thread not found, resolved, no active agents |
+| `simulateIncomingThread` | `subject`, `snippet`, `sender`, `priority`, `category?` | `Thread`            | —                                            |
+| `getMetrics`             | —                                                       | `AssignmentMetrics` | —                                            |
 
 ## Auto-Routing Algorithm
 
@@ -103,14 +103,14 @@ interface AssignmentMetrics {
 
 ### Specialty Keywords
 
-| Specialty | Keywords |
-| --- | --- |
-| stellar | stellar, blockchain, freighter, escrow |
-| security | security, login, anomalous, hack, xss |
-| billing | billing, invoice, discrepancy, finance |
-| technical | api, gateway, technical, error, 502 |
-| support | support, help, question, feedback |
-| general | (fallback when no keywords match) |
+| Specialty | Keywords                               |
+| --------- | -------------------------------------- |
+| stellar   | stellar, blockchain, freighter, escrow |
+| security  | security, login, anomalous, hack, xss  |
+| billing   | billing, invoice, discrepancy, finance |
+| technical | api, gateway, technical, error, 502    |
+| support   | support, help, question, feedback      |
+| general   | (fallback when no keywords match)      |
 
 ## Determinism Guarantees
 
@@ -124,19 +124,19 @@ interface AssignmentMetrics {
 
 `useMultiAgentAssignment()` returns:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `agents` | `Agent[]` | Current agent roster |
-| `threads` | `Thread[]` | Current thread queue |
-| `logs` | `AssignmentLog[]` | Assignment audit trail |
-| `metrics` | `AssignmentMetrics` | Aggregate statistics |
-| `assignAgent` | `(threadId, agentId, operator?) => void` | Manual assignment |
-| `unassignAgent` | `(threadId, agentId, operator?) => void` | Remove assignment |
-| `updateAgentStatus` | `(agentId, status) => void` | Change availability |
-| `resolveThread` | `(threadId, operator?) => void` | Mark resolved |
-| `autoAssign` | `(threadId) => void` | Smart-route single thread |
-| `autoAssignAllUnassigned` | `() => { count, errors }` | Batch auto-route |
-| `simulateIncomingThread` | `(subject, snippet, sender, priority, category?) => void` | Add thread |
+| Field                     | Type                                                      | Description               |
+| ------------------------- | --------------------------------------------------------- | ------------------------- |
+| `agents`                  | `Agent[]`                                                 | Current agent roster      |
+| `threads`                 | `Thread[]`                                                | Current thread queue      |
+| `logs`                    | `AssignmentLog[]`                                         | Assignment audit trail    |
+| `metrics`                 | `AssignmentMetrics`                                       | Aggregate statistics      |
+| `assignAgent`             | `(threadId, agentId, operator?) => void`                  | Manual assignment         |
+| `unassignAgent`           | `(threadId, agentId, operator?) => void`                  | Remove assignment         |
+| `updateAgentStatus`       | `(agentId, status) => void`                               | Change availability       |
+| `resolveThread`           | `(threadId, operator?) => void`                           | Mark resolved             |
+| `autoAssign`              | `(threadId) => void`                                      | Smart-route single thread |
+| `autoAssignAllUnassigned` | `() => { count, errors }`                                 | Batch auto-route          |
+| `simulateIncomingThread`  | `(subject, snippet, sender, priority, category?) => void` | Add thread                |
 
 ## Test Fixtures
 

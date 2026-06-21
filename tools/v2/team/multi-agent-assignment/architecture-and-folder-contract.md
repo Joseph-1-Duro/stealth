@@ -16,7 +16,9 @@ To ensure long-term maintainability, this tool is built as an **isolated, self-c
 ---
 
 ## 2. Campaign Labels & Metadata
+
 This issue belongs to the following campaigns and must carry these identifiers:
+
 - `GrantFox OSS`
 - `Maybe Rewarded`
 - `Official Campaign`
@@ -59,6 +61,7 @@ tools/v2/team/multi-agent-assignment/
 ```
 
 ### Module Responsibilities:
+
 1. **Types Layer (`types/index.ts`)**: Pure TypeScript contracts. Contains no runtime code. Exposes core schemas (`Agent`, `Thread`, `AssignmentLog`, `AssignmentMetrics`).
 2. **Service Layer (`services/assignment.service.ts`)**: The business engine. Fully synchronous, in-memory array operations. Evaluates agent scores and manages state updates.
 3. **Hooks Layer (`hooks/use-multi-agent-assignment.ts`)**: The state coordinator. Binds the synchronous service state to the React lifecycle using local React state and callbacks.
@@ -90,8 +93,8 @@ syncState() called (Dispatches array clones)
 React State re-renders components
 ```
 
-*   **In-Memory Store**: Dictates the truth of the system.
-*   **Idempotency**: Assignment/unassignment operations check current status before logging. Repeated operations return immediately, preventing duplicate logs or side effects.
+- **In-Memory Store**: Dictates the truth of the system.
+- **Idempotency**: Assignment/unassignment operations check current status before logging. Repeated operations return immediately, preventing duplicate logs or side effects.
 
 ---
 
@@ -100,22 +103,26 @@ React State re-renders components
 To preserve the release tier decoupling, strict dependency limits are enforced:
 
 ### Allowed External Dependencies
+
 - `react` (`useState`, `useMemo`, `useCallback`)
 - `vitest` (Testing framework)
 
 ### Disallowed Dependencies (Strict Boundaries)
+
 - **No imports** from the main app root (`src/components/ui/`, `src/features/`, `src/routes/`).
 - **No network calls** or WebSockets.
 - **No storage persistence** (e.g., LocalStorage, IndexedDB, or SQL databases).
 - **No shared styling frameworks** (components use isolated CSS/inline styles).
 
 ### What Future Contributors May Change
+
 - Refactor/optimize algorithms in `services/assignment.service.ts` (as long as public method signatures remain identical).
 - Add new local UI components inside the `components/` subdirectory.
 - Add additional test cases or local fixtures.
 - Adjust specialty keywords list to improve routing accuracy.
 
 ### What Future Contributors May NOT Change
+
 - Modify public contracts in `types/index.ts` without formal architectural review.
 - Break the directory isolation by importing code from outside this directory.
 - Wire this tool directly into the core navigation or router system (must remain isolated under `tools/`).
@@ -126,21 +133,22 @@ To preserve the release tier decoupling, strict dependency limits are enforced:
 
 Below is the time and space complexity design analysis of all operations within `createAssignmentService`:
 
-| Operation | Time Complexity | Space Complexity | Description / Rationale |
-| :--- | :--- | :--- | :--- |
-| `getAgents` / `getThreads` / `getLogs` | $O(1)$ | $O(1)$ | Direct access to in-memory array references. |
-| `getThreadRequiredSpecialties` | $O(N)$ | $O(1)$ | $N$ is the length of the parsed thread subject, snippet, and category text. Scanned via string-contains matches. Max return size is bounded ($S \le 5$). |
-| `computeMetrics` | $O(A + T)$ | $O(1)$ | Single pass over agents ($A$) and threads ($T$) to count attributes. Bounded accumulator footprint. |
-| `assignAgent` / `unassignAgent` | $O(A + T)$ | $O(A + T)$ | Array search to locate entities: $O(A)$ and $O(T)$ operations. Emits copied arrays to trigger React component updates. |
-| `updateAgentStatus` | $O(A)$ | $O(A)$ | Traverses agent array ($A$) to find target agent and clones state. |
-| `resolveThread` | $O(A + T)$ | $O(A + T)$ | Marks thread resolved ($O(T)$), finds its assignees, and decrements workload counters ($O(A)$). |
-| `autoAssign` | $O(A \log A + T + N)$ | $O(A)$ | Matches specialties ($O(N)$), scores active agents, sorts candidates ($O(A \log A)$), and updates the matching entity state ($O(A+T)$). |
+| Operation                              | Time Complexity       | Space Complexity | Description / Rationale                                                                                                                                  |
+| :------------------------------------- | :-------------------- | :--------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getAgents` / `getThreads` / `getLogs` | $O(1)$                | $O(1)$           | Direct access to in-memory array references.                                                                                                             |
+| `getThreadRequiredSpecialties`         | $O(N)$                | $O(1)$           | $N$ is the length of the parsed thread subject, snippet, and category text. Scanned via string-contains matches. Max return size is bounded ($S \le 5$). |
+| `computeMetrics`                       | $O(A + T)$            | $O(1)$           | Single pass over agents ($A$) and threads ($T$) to count attributes. Bounded accumulator footprint.                                                      |
+| `assignAgent` / `unassignAgent`        | $O(A + T)$            | $O(A + T)$       | Array search to locate entities: $O(A)$ and $O(T)$ operations. Emits copied arrays to trigger React component updates.                                   |
+| `updateAgentStatus`                    | $O(A)$                | $O(A)$           | Traverses agent array ($A$) to find target agent and clones state.                                                                                       |
+| `resolveThread`                        | $O(A + T)$            | $O(A + T)$       | Marks thread resolved ($O(T)$), finds its assignees, and decrements workload counters ($O(A)$).                                                          |
+| `autoAssign`                           | $O(A \log A + T + N)$ | $O(A)$           | Matches specialties ($O(N)$), scores active agents, sorts candidates ($O(A \log A)$), and updates the matching entity state ($O(A+T)$).                  |
 
 ---
 
 ## 7. Stellar Integration Alignment
 
 While this tool is decoupled from real chain calls, it is designed with Stellar ledger concepts and Freighter wallet properties in mind:
+
 1. **Specialty Keyphrase Matching**: Automatically associates inbox threads containing "Stellar", "Freighter", "Escrow", and "Blockchain" with agents holding `stellar` credentials (e.g., matching Freighter wallet support queues to specialized engineers).
 2. **Transaction Escrow Workloads**: Auto-routing prioritizes active, low-workload agents for complex escrow-related issues, minimizing response latency.
 3. **Freighter API Error Resolution**: Predefined categorizations map freighter errors to the `technical` and `stellar` agent queues automatically.
@@ -150,12 +158,15 @@ While this tool is decoupled from real chain calls, it is designed with Stellar 
 ## 8. Verification & QA Plan
 
 ### Automated Execution
+
 Unit tests run in an isolated test runner instance. Verify all 19 test conditions:
+
 ```bash
 npx vitest -c tools/v2/team/multi-agent-assignment/vitest.config.ts run
 ```
 
 ### Reviewer Acceptance Checklist
+
 - [ ] All changes are contained within the `tools/v2/team/multi-agent-assignment/` directory.
 - [ ] No imports cross the boundary to the `src/` core directory.
 - [ ] The `architecture-and-folder-contract.md` is registered in the workspace.

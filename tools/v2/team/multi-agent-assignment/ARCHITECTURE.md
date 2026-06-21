@@ -96,18 +96,18 @@ createAssignmentService(
 
 **Public Methods (returned by factory):**
 
-| Method | Purpose |
-| --- | --- |
-| `getAgents()` | Return current agent roster |
-| `getThreads()` | Return current thread queue |
-| `getLogs()` | Return assignment audit log |
-| `assignAgent(threadId, agentId, operator?)` | Manually assign agent to thread |
-| `unassignAgent(threadId, agentId, operator?)` | Remove agent from thread |
-| `updateAgentStatus(agentId, status)` | Change agent availability |
-| `resolveThread(threadId, operator?)` | Mark thread resolved, clear assignments |
-| `autoAssign(threadId)` | Smart-route thread to best agent |
-| `simulateIncomingThread(...)` | Add a new unassigned thread |
-| `getMetrics()` | Compute aggregate workspace metrics |
+| Method                                        | Purpose                                 |
+| --------------------------------------------- | --------------------------------------- |
+| `getAgents()`                                 | Return current agent roster             |
+| `getThreads()`                                | Return current thread queue             |
+| `getLogs()`                                   | Return assignment audit log             |
+| `assignAgent(threadId, agentId, operator?)`   | Manually assign agent to thread         |
+| `unassignAgent(threadId, agentId, operator?)` | Remove agent from thread                |
+| `updateAgentStatus(agentId, status)`          | Change agent availability               |
+| `resolveThread(threadId, operator?)`          | Mark thread resolved, clear assignments |
+| `autoAssign(threadId)`                        | Smart-route thread to best agent        |
+| `simulateIncomingThread(...)`                 | Add a new unassigned thread             |
+| `getMetrics()`                                | Compute aggregate workspace metrics     |
 
 **Pure Utility Exports:**
 
@@ -160,11 +160,11 @@ createAssignmentService(
 
 **Responsibility:** Render the assignment workspace and handle user interactions.
 
-| Component | Role |
-| --- | --- |
+| Component           | Role                                                         |
+| ------------------- | ------------------------------------------------------------ |
 | `AssignmentConsole` | Top-level orchestrator; binds hook state to child components |
-| `ThreadList` | Thread queue with search, filters, assign/unassign controls |
-| `AgentList` | Agent roster cards with status and workload display |
+| `ThreadList`        | Thread queue with search, filters, assign/unassign controls  |
+| `AgentList`         | Agent roster cards with status and workload display          |
 
 **Rules:**
 
@@ -202,14 +202,14 @@ createAssignmentService(
 
 ### Data Ownership
 
-| Module | Owns | Responsible For |
-| --- | --- | --- |
-| `types/index.ts` | Data shapes | Defining all contracts |
-| `services/assignment.service.ts` | In-memory store | Routing, CRUD, workload tracking |
-| `hooks/use-multi-agent-assignment.ts` | React state | Syncing service to UI |
-| `components/` | Presentation | User interaction and display |
-| `fixtures/multi-agent.fixtures.ts` | Test data | Deterministic seed data |
-| `tests/` | Test coverage | Validating all contract guarantees |
+| Module                                | Owns            | Responsible For                    |
+| ------------------------------------- | --------------- | ---------------------------------- |
+| `types/index.ts`                      | Data shapes     | Defining all contracts             |
+| `services/assignment.service.ts`      | In-memory store | Routing, CRUD, workload tracking   |
+| `hooks/use-multi-agent-assignment.ts` | React state     | Syncing service to UI              |
+| `components/`                         | Presentation    | User interaction and display       |
+| `fixtures/multi-agent.fixtures.ts`    | Test data       | Deterministic seed data            |
+| `tests/`                              | Test coverage   | Validating all contract guarantees |
 
 ### Data Flow
 
@@ -342,16 +342,16 @@ A future integration issue may add:
 
 ### Coverage
 
-| Category | Scenario | Test File |
-| --- | --- | --- |
-| Initialization | Default agents, threads, empty logs | `assignment.test.ts` |
-| Specialty deduction | Stellar, security, billing, general fallback | `assignment.test.ts` |
-| Manual assignment | Assign, idempotent re-assign, not-found errors | `assignment.test.ts` |
-| Unassignment | Unassign, status revert, workload decrement | `assignment.test.ts` |
-| Agent status | Update availability status | `assignment.test.ts` |
-| Resolution | Resolve thread, clear assignments, decrement workloads | `assignment.test.ts` |
-| Auto-routing | Specialty match, workload fallback, offline bypass | `assignment.test.ts` |
-| Metrics | Aggregate counts and averages | `assignment.test.ts` |
+| Category            | Scenario                                               | Test File            |
+| ------------------- | ------------------------------------------------------ | -------------------- |
+| Initialization      | Default agents, threads, empty logs                    | `assignment.test.ts` |
+| Specialty deduction | Stellar, security, billing, general fallback           | `assignment.test.ts` |
+| Manual assignment   | Assign, idempotent re-assign, not-found errors         | `assignment.test.ts` |
+| Unassignment        | Unassign, status revert, workload decrement            | `assignment.test.ts` |
+| Agent status        | Update availability status                             | `assignment.test.ts` |
+| Resolution          | Resolve thread, clear assignments, decrement workloads | `assignment.test.ts` |
+| Auto-routing        | Specialty match, workload fallback, offline bypass     | `assignment.test.ts` |
+| Metrics             | Aggregate counts and averages                          | `assignment.test.ts` |
 
 ### Test Execution
 
@@ -413,25 +413,25 @@ Reviewers must verify:
 
 ## File Ownership Map
 
-| File | Module | Owner | Type |
-| --- | --- | --- | --- |
-| `types/index.ts` | Data Model | Service Team | Stable |
-| `services/assignment.service.ts` | Core Service | Service Team | Stable |
-| `hooks/use-multi-agent-assignment.ts` | React Hook | UI Team | Stable |
-| `components/*.tsx` | UI Layer | UI Team | Mutable |
-| `index.ts` | Public API | Service Team | Stable |
-| `specs.md` | Specification | Service Team | Reference |
-| `ARCHITECTURE.md` | Architecture | Service Team | Reference |
-| `README.md` | Overview | Service Team | Reference |
-| `docs/review-notes.md` | Review Guide | Service Team | Reference |
-| `fixtures/multi-agent.fixtures.ts` | Test Data | QA Team | Mutable |
-| `tests/assignment.test.ts` | Test Suite | QA Team | Mutable |
-| `tests/test-plan.md` | Test Plan | QA Team | Reference |
+| File                                  | Module        | Owner        | Type      |
+| ------------------------------------- | ------------- | ------------ | --------- |
+| `types/index.ts`                      | Data Model    | Service Team | Stable    |
+| `services/assignment.service.ts`      | Core Service  | Service Team | Stable    |
+| `hooks/use-multi-agent-assignment.ts` | React Hook    | UI Team      | Stable    |
+| `components/*.tsx`                    | UI Layer      | UI Team      | Mutable   |
+| `index.ts`                            | Public API    | Service Team | Stable    |
+| `specs.md`                            | Specification | Service Team | Reference |
+| `ARCHITECTURE.md`                     | Architecture  | Service Team | Reference |
+| `README.md`                           | Overview      | Service Team | Reference |
+| `docs/review-notes.md`                | Review Guide  | Service Team | Reference |
+| `fixtures/multi-agent.fixtures.ts`    | Test Data     | QA Team      | Mutable   |
+| `tests/assignment.test.ts`            | Test Suite    | QA Team      | Mutable   |
+| `tests/test-plan.md`                  | Test Plan     | QA Team      | Reference |
 
 ---
 
 ## Version History
 
-| Date | Status | Notes |
-| --- | --- | --- |
+| Date       | Status  | Notes                                                     |
+| ---------- | ------- | --------------------------------------------------------- |
 | 2026-06-20 | Initial | Created architecture contract for V2 release (issue #634) |
