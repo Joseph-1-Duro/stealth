@@ -1,41 +1,50 @@
-import type { NormalizedEmail } from "./emailToneRewriter";
+import type { RewriteRequest } from "./emailToneRewriter";
 
 export interface RewriterFixture {
-  id: string;
   description: string;
-  email: NormalizedEmail;
+  request: RewriteRequest;
 }
 
-/**
- * Deterministic, synthetic emails used for tests, docs, and future UI previews.
- * None of these contain real personal data.
- */
-export const SAMPLE_EMAILS: RewriterFixture[] = [
+/** Synthetic drafts mirroring docs/fixtures.md. No real personal data. */
+export const FORMAL_FOLLOW_UP: RewriteRequest = {
+  id: "tone-formal-follow-up",
+  subject: "Following up",
+  bodyText: "Hey Sam, can you send the Q3 invoice by Friday? We need it before the launch review.",
+  tone: "formal",
+  maxWords: 80,
+};
+
+export const FRIENDLY_DELAY: RewriteRequest = {
+  id: "tone-friendly-apology",
+  subject: "Delay update",
+  bodyText: "The report is late. I will send it tomorrow morning.",
+  tone: "friendly",
+  maxWords: 60,
+};
+
+/** Tone is intentionally invalid to exercise validation. */
+export const UNSUPPORTED_TONE_DRAFT = {
+  id: "tone-unsupported",
+  subject: "Unsupported tone",
+  bodyText: "Please review this draft.",
+  tone: "sarcastic",
+  maxWords: 50,
+};
+
+export const EMPTY_BODY_DRAFT: RewriteRequest = {
+  id: "empty-body",
+  subject: "No content",
+  bodyText: "   ",
+  tone: "concise",
+};
+
+export const SAMPLE_DRAFTS: RewriterFixture[] = [
   {
-    id: "casual-followup",
-    description: "Casual follow-up full of contractions and filler words.",
-    email: {
-      subject: "quick follow up",
-      sender: "sam@example.com",
-      receivedAt: "2026-01-02T10:00:00.000Z",
-      body: "Hey, I just wanted to check if you got my last email. I don't think we're blocked, but I can't really tell. Thanks!",
-    },
+    description: "Casual follow-up rewritten formally.",
+    request: FORMAL_FOLLOW_UP,
   },
   {
-    id: "wordy-request",
-    description: "Wordy, hedged request suited to the concise and direct tones.",
-    email: {
-      subject: "report",
-      sender: "lee@example.com",
-      receivedAt: "2026-01-05T08:30:00.000Z",
-      body: "I was wondering if you could maybe send the report. In order to finish, I really just need the latest numbers. Thanks so much!",
-    },
+    description: "Blunt delay note softened for a friendly tone.",
+    request: FRIENDLY_DELAY,
   },
 ];
-
-export const EMPTY_BODY_EMAIL: NormalizedEmail = {
-  subject: "No content",
-  sender: "noreply@example.com",
-  receivedAt: "2026-01-06T12:00:00.000Z",
-  body: "   ",
-};

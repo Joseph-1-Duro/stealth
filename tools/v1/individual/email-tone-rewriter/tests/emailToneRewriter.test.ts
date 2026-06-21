@@ -1,102 +1,144 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_REWRITER_OPTIONS,
   SUPPORTED_TONES,
   capitalizeSentences,
   rewriteEmailTone,
   splitSentences,
   toReadyState,
-  type NormalizedEmail,
+  type RewriteRequest,
 } from "../services/emailToneRewriter";
-import { EMPTY_BODY_EMAIL, SAMPLE_EMAILS } from "../services/fixtures";
-
-const casualEmail: NormalizedEmail = SAMPLE_EMAILS[0].email;
-const wordyEmail: NormalizedEmail = SAMPLE_EMAILS[1].email;
+import {
+  EMPTY_BODY_DRAFT,
+  FORMAL_FOLLOW_UP,
+  FRIENDLY_DELAY,
+  SAMPLE_DRAFTS,
+  UNSUPPORTED_TONE_DRAFT,
+} from "../services/fixtures";
 
 describe("rewriteEmailTone", () => {
-  it("defaults to the professional tone and expands contractions", () => {
-    const result = rewriteEmailTone(casualEmail);
+  it("rewrites into the formal tone while preserving key facts", () => {
+    const result = rewriteEmailTone(FORMAL_FOLLOW_UP);
 
     expect(result.status).toBe("ok");
     if (result.status !== "ok") return;
-    expect(result.rewrite.tone).toBe(DEFAULT_REWRITER_OPTIONS.tone);
-    expect(result.rewrite.body).toContain("do not");
-    expect(result.rewrite.body).not.toContain("don't");
-    expect(result.rewrite.body).not.toContain("Hey");
-    expect(result.rewrite.source.sender).toBe("sam@example.com");
+    expect(result.rewrite.tone).toBe("formal");
+    expect(result.rewrite.preservedKeyPoints).toEqual(
+      expect.arrayContaining(["Sam", "Q3", "Friday"]),
+    );
+    expect(result.rewrite.rewrittenBody).toContain("Sam");
+    expect(result.rewrite.rewrittenBody).toContain("Q3");
+    expect(result.rewrite.rewrittenBody).toContain("Friday");
+    expect(result.rewrite.rewrittenBody).not.toContain("Hey");
+    expect(result.rewrite.changed).toBe(true);
   });
 
-  it("removes filler words in the concise tone", () => {
-    const result = rewriteEmailTone(wordyEmail, { tone: "concise" });
+  it("softens a blunt note for the friendly tone without inventing a reason", () => {
+    const result = rewriteEmailTone(FRIENDLY_DELAY);
 
     expect(result.status).toBe("ok");
     if (result.status !== "ok") return;
-    expect(result.rewrite.body).not.toContain("really");
-    expect(result.rewrite.body).not.toContain("just");
-    expect(result.rewrite.body.toLowerCase()).not.toContain("in order to");
+    expect(result.rewrite.rewrittenBody).toContain("tomorrow");
+    expect(result.rewrite.rewrittenBody.toLowerCase()).not.toContain("because");
+    expect(result.rewrite.preservedKeyPoints).toContain("tomorrow morning");
   });
 
-  it("strips hedging in the direct tone", () => {
-    const result = rewriteEmailTone(wordyEmail, { tone: "direct" });
-
-    expect(result.status).toBe("ok");
-    if (result.status !== "ok") return;
-    expect(result.rewrite.body).toContain("Please send the report.");
-    expect(result.rewrite.body.toLowerCase()).not.toContain("maybe");
-    expect(result.rewrite.body.toLowerCase()).not.toContain("wondering");
-  });
-
-  it("rewrites sign-offs in the friendly tone", () => {
-    const email: NormalizedEmail = {
-      subject: "s",
-      sender: "a@example.com",
-      receivedAt: "2026-01-01T00:00:00.000Z",
-      body: "The numbers are ready. Regards.",
+  it("preserves dates, names, amounts, and links", () => {
+    const request: RewriteRequest = {
+      subject: "Payment",
+      bodyText:
+        "Hey Dana, please pay the $250 invoice by Monday and see https://pay.example.com for details.",
+      tone: "formal",
     };
-    const result = rewriteEmailTone(email, { tone: "friendly" });
+    const result = rewriteEmailTone(request);
 
     expect(result.status).toBe("ok");
     if (result.status !== "ok") return;
-    expect(result.rewrite.body.toLowerCase()).toContain("thanks so much");
+    const body = result.rewrite.rewrittenBody;
+    expect(body).toContain("Dana");
+    expect(body).toContain("$250");
+    expect(body).toContain("Monday");
+    expect(body).toContain("https://pay.example.com");
+    expect(result.rewrite.preservedKeyPoints).toEqual(
+      expect.arrayContaining(["Dana", "$250", "Monday", "https://pay.example.com"]),
+    );
   });
 
-  it("is deterministic for the same input", () => {
-    expect(rewriteEmailTone(casualEmail)).toEqual(rewriteEmailTone(casualEmail));
+  it("returns a deterministic error for an unsupported tone", () => {
+    const draft = UNSUPPORTED_TONE_DRAFT as unknown as RewriteRequest;
+    const result = rewriteEmailTone(draft);
+
+    expect(result.status).toBe("error");
+    if (result.status !== "error") return;
+    expect(result.code).toBe("unsupported-tone");
+    expect(rewriteEmailTone(draft)).toEqual(result);
   });
 
-  it("returns an error for an empty body", () => {
-    const result = rewriteEmailTone(EMPTY_BODY_EMAIL);
+  it("rejects an empty draft body", () => {
+    const result = rewriteEmailTone(EMPTY_BODY_DRAFT);
 
     expect(result.status).toBe("error");
     if (result.status !== "error") return;
     expect(result.code).toBe("empty-body");
   });
 
-  it("returns an error for unsupported input", () => {
+  it("rejects malformed input", () => {
     const result = rewriteEmailTone({
       subject: "x",
-    } as unknown as NormalizedEmail);
+    } as unknown as RewriteRequest);
 
     expect(result.status).toBe("error");
     if (result.status !== "error") return;
     expect(result.code).toBe("unsupported-input");
   });
 
-  it("returns an error for an unsupported tone", () => {
-    const result = rewriteEmailTone(casualEmail, {
-      tone: "shouty" as unknown as (typeof SUPPORTED_TONES)[number],
-    });
+  it("applies length constraints without dropping required facts", () => {
+    const request: RewriteRequest = {
+      subject: "Reminder",
+      bodyText:
+        "Send the Q3 invoice by Friday. This is a friendly reminder. Thank you so much for your help.",
+      tone: "formal",
+      maxWords: 6,
+    };
+    const result = rewriteEmailTone(request);
 
-    expect(result.status).toBe("error");
-    if (result.status !== "error") return;
-    expect(result.code).toBe("unsupported-tone");
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.rewrite.truncated).toBe(true);
+    expect(result.rewrite.rewrittenBody).toContain("Q3");
+    expect(result.rewrite.rewrittenBody).toContain("Friday");
   });
 
-  it("rewrites every fixture in every supported tone", () => {
+  it("separates preserved key points from the rewritten body", () => {
+    const result = rewriteEmailTone(FORMAL_FOLLOW_UP);
+
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(Array.isArray(result.rewrite.preservedKeyPoints)).toBe(true);
+    expect(result.rewrite.preservedKeyPoints.length).toBeGreaterThan(0);
+  });
+
+  it("produces deterministic output for the same draft", () => {
+    expect(rewriteEmailTone(FRIENDLY_DELAY)).toEqual(rewriteEmailTone(FRIENDLY_DELAY));
+  });
+
+  it("keeps send, save, and mutate flags disabled", () => {
+    const result = rewriteEmailTone(FORMAL_FOLLOW_UP);
+
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.rewrite.actions).toEqual({
+      canSend: false,
+      canSave: false,
+      canMutate: false,
+    });
+  });
+
+  it("rewrites every sample draft in every supported tone", () => {
     for (const tone of SUPPORTED_TONES) {
-      for (const fixture of SAMPLE_EMAILS) {
-        expect(rewriteEmailTone(fixture.email, { tone }).status).toBe("ok");
+      for (const fixture of SAMPLE_DRAFTS) {
+        const result = rewriteEmailTone({ ...fixture.request, tone });
+        expect(result.status).toBe("ok");
       }
     }
   });
@@ -104,15 +146,15 @@ describe("rewriteEmailTone", () => {
 
 describe("helpers", () => {
   it("splits text into sentences", () => {
-    expect(splitSentences("Hello world. Second one!")).toEqual(["Hello world.", "Second one!"]);
+    expect(splitSentences("One. Two!")).toEqual(["One.", "Two!"]);
   });
 
-  it("capitalizes the first letter of each sentence", () => {
+  it("capitalizes sentence beginnings", () => {
     expect(capitalizeSentences("hello there. how are you?")).toBe("Hello there. How are you?");
   });
 
   it("maps results into UI states", () => {
-    expect(toReadyState(rewriteEmailTone(casualEmail)).status).toBe("ready");
-    expect(toReadyState(rewriteEmailTone(EMPTY_BODY_EMAIL)).status).toBe("error");
+    expect(toReadyState(rewriteEmailTone(FORMAL_FOLLOW_UP)).status).toBe("ready");
+    expect(toReadyState(rewriteEmailTone(EMPTY_BODY_DRAFT)).status).toBe("error");
   });
 });

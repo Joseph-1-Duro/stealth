@@ -1,60 +1,64 @@
 /**
  * Email Tone Rewriter — core feature engine.
  *
- * Pure, deterministic logic that rewrites a single normalized email body into a
+ * Pure, deterministic, rule-based rewriting of a single email draft into a
  * requested tone. No network calls, no mailbox mutations, and no external AI
- * providers: every transformation is a local, rule-based rewrite of text the
- * user already wrote, so the tool stays isolated and safe to review.
+ * providers: every transformation rephrases text the user already wrote and
+ * preserves the factual key points for review before any action is taken.
  */
 
-export interface NormalizedEmail {
+export type ToneId = "concise" | "friendly" | "formal" | "apologetic";
+
+export const SUPPORTED_TONES: ToneId[] = ["concise", "friendly", "formal", "apologetic"];
+
+export interface RewriteRequest {
+  /** Optional fixture/correlation id; ignored by the engine. */
+  id?: string;
   subject: string;
-  sender: string;
-  receivedAt: string;
-  body: string;
+  bodyText: string;
+  tone: ToneId;
+  /** Optional soft word cap. Filler-only sentences are trimmed first. */
+  maxWords?: number;
 }
 
-export type ToneId = "professional" | "friendly" | "concise" | "direct";
-
-export interface ToneRewriterOptions {
-  /** Target tone for the rewrite. Defaults to "professional". */
-  tone?: ToneId;
-  /** Rewrite each paragraph separately instead of reflowing into one block. */
-  preserveParagraphs?: boolean;
-}
-
-export interface RewriteSource {
-  subject: string;
-  sender: string;
-  receivedAt: string;
+/** The engine never sends, saves, or mutates anything. */
+export interface RewriteActionFlags {
+  canSend: false;
+  canSave: false;
+  canMutate: false;
 }
 
 export interface ToneRewrite {
   tone: ToneId;
-  body: string;
+  rewrittenBody: string;
+  preservedKeyPoints: string[];
+  wordCount: number;
+  truncated: boolean;
   changed: boolean;
-  sentenceCount: number;
-  source: RewriteSource;
+  actions: RewriteActionFlags;
+  source: {
+    subject: string;
+    bodyText: string;
+  };
 }
 
-export type RewriterErrorCode = "empty-body" | "unsupported-input" | "unsupported-tone";
+export type RewriterErrorCode = "empty-body" | "unsupported-tone" | "unsupported-input";
 
 export type RewriterResult =
   | { status: "ok"; rewrite: ToneRewrite }
   | { status: "error"; code: RewriterErrorCode; message: string };
 
-/** Lifecycle states a UI can render for an async rewrite call. */
+/** Lifecycle states a reviewing UI can render around a rewrite call. */
 export type RewriterState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "ready"; rewrite: ToneRewrite }
   | { status: "error"; code: RewriterErrorCode; message: string };
 
-export const SUPPORTED_TONES: ToneId[] = ["professional", "friendly", "concise", "direct"];
-
-export const DEFAULT_REWRITER_OPTIONS: Required<ToneRewriterOptions> = {
-  tone: "professional",
-  preserveParagraphs: false,
+const DISABLED_ACTIONS: RewriteActionFlags = {
+  canSend: false,
+  canSave: false,
+  canMutate: false,
 };
 
 type ReplacementRule = [RegExp, string];
@@ -65,52 +69,31 @@ const CONTRACTIONS: ReplacementRule[] = [
   [/\bdidn't\b/gi, "did not"],
   [/\bcan't\b/gi, "cannot"],
   [/\bwon't\b/gi, "will not"],
-  [/\bisn't\b/gi, "is not"],
-  [/\baren't\b/gi, "are not"],
-  [/\bwasn't\b/gi, "was not"],
-  [/\bweren't\b/gi, "were not"],
-  [/\bwouldn't\b/gi, "would not"],
-  [/\bcouldn't\b/gi, "could not"],
-  [/\bshouldn't\b/gi, "should not"],
-  [/\bi'm\b/gi, "I am"],
+  [/\bI'm\b/gi, "I am"],
   [/\bit's\b/gi, "it is"],
-  [/\bthat's\b/gi, "that is"],
   [/\bwe're\b/gi, "we are"],
   [/\byou're\b/gi, "you are"],
-  [/\bthey're\b/gi, "they are"],
-  [/\bi'll\b/gi, "I will"],
+  [/\bI'll\b/gi, "I will"],
   [/\bwe'll\b/gi, "we will"],
-  [/\bi've\b/gi, "I have"],
-  [/\bwe've\b/gi, "we have"],
-  [/\bi'd\b/gi, "I would"],
-  [/\bgonna\b/gi, "going to"],
-  [/\bwanna\b/gi, "want to"],
 ];
 
-const CASUAL_TO_FORMAL: ReplacementRule[] = [
+const CASUAL_GREETINGS: ReplacementRule[] = [
   [/\bhey\b/gi, "Hello"],
+  [/\bhi\b/gi, "Hello"],
   [/\byeah\b/gi, "yes"],
-  [/\byep\b/gi, "yes"],
-  [/\bnope\b/gi, "no"],
   [/\bthanks\b/gi, "thank you"],
-  [/\bthx\b/gi, "thank you"],
-  [/\bkinda\b/gi, "somewhat"],
-  [/\bguys\b/gi, "team"],
-  [/\basap\b/gi, "as soon as possible"],
+];
+
+const FORMAL_PHRASES: ReplacementRule[] = [
+  [/\bcan you\b/gi, "could you please"],
+  [/\bwanna\b/gi, "would like to"],
+  [/\bgonna\b/gi, "going to"],
 ];
 
 const FRIENDLY_REPLACEMENTS: ReplacementRule[] = [
-  [/\bplease be advised that\b/gi, "just so you know,"],
+  [/\bhey\b/gi, "Hi"],
+  [/\bis late\b/gi, "is running a little behind"],
   [/\bregards\b/gi, "thanks so much"],
-  [/\bas soon as possible\b/gi, "whenever you get a chance"],
-];
-
-const CONCISE_REPLACEMENTS: ReplacementRule[] = [
-  [/\bin order to\b/gi, "to"],
-  [/\bdue to the fact that\b/gi, "because"],
-  [/\bat this point in time\b/gi, "now"],
-  [/\bin the event that\b/gi, "if"],
-  [/\ba large number of\b/gi, "many"],
 ];
 
 const FILLERS: RegExp[] = [
@@ -119,33 +102,7 @@ const FILLERS: RegExp[] = [
   /\bbasically\b/gi,
   /\bactually\b/gi,
   /\bvery\b/gi,
-  /\bi think\b/gi,
-  /\bi guess\b/gi,
-  /\bsort of\b/gi,
-  /\bkind of\b/gi,
 ];
-
-const HEDGES: ReplacementRule[] = [
-  [/\bi was wondering if you could\b/gi, "please"],
-  [/\bit would be great if you could\b/gi, "please"],
-  [/\bwhen you get a chance,?\b/gi, "please"],
-  [/\bif possible,?\b/gi, ""],
-  [/\bmaybe\b/gi, ""],
-  [/\bperhaps\b/gi, ""],
-];
-
-function isNormalizedEmail(value: unknown): value is NormalizedEmail {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.subject === "string" &&
-    typeof candidate.sender === "string" &&
-    typeof candidate.receivedAt === "string" &&
-    typeof candidate.body === "string"
-  );
-}
 
 /** Deterministic sentence splitter. */
 export function splitSentences(text: string): string[] {
@@ -155,14 +112,6 @@ export function splitSentences(text: string): string[] {
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 0);
-}
-
-function applyReplacements(text: string, rules: ReplacementRule[]): string {
-  return rules.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text);
-}
-
-function removeFillers(text: string): string {
-  return FILLERS.reduce((acc, pattern) => acc.replace(pattern, ""), text);
 }
 
 /** Collapses whitespace and removes spaces left before punctuation. */
@@ -180,102 +129,171 @@ export function capitalizeSentences(text: string): string {
     .join(" ");
 }
 
-function toProfessional(body: string): string {
-  let text = applyReplacements(body, CONTRACTIONS);
-  text = applyReplacements(text, CASUAL_TO_FORMAL);
-  return capitalizeSentences(tidy(text));
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return 0;
+  }
+  return trimmed.split(/\s+/).length;
 }
 
-function toFriendly(body: string): string {
-  const text = applyReplacements(body, FRIENDLY_REPLACEMENTS);
-  return capitalizeSentences(tidy(text));
+function applyReplacements(text: string, rules: ReplacementRule[]): string {
+  return rules.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text);
+}
+
+function removeFillers(text: string): string {
+  return FILLERS.reduce((acc, pattern) => acc.replace(pattern, ""), text);
 }
 
 function toConcise(body: string): string {
-  let text = removeFillers(body);
-  text = applyReplacements(text, CONCISE_REPLACEMENTS);
+  return capitalizeSentences(tidy(removeFillers(body)));
+}
+
+function toFriendly(body: string): string {
+  return capitalizeSentences(tidy(applyReplacements(body, FRIENDLY_REPLACEMENTS)));
+}
+
+function toFormal(body: string): string {
+  let text = applyReplacements(body, CONTRACTIONS);
+  text = applyReplacements(text, CASUAL_GREETINGS);
+  text = applyReplacements(text, FORMAL_PHRASES);
   return capitalizeSentences(tidy(text));
 }
 
-function toDirect(body: string): string {
-  let text = applyReplacements(body, HEDGES);
-  text = removeFillers(text);
-  return capitalizeSentences(tidy(text));
+function toApologetic(body: string): string {
+  const text = applyReplacements(body, CONTRACTIONS);
+  return capitalizeSentences(tidy("I apologize for any inconvenience. " + text));
 }
 
 const TONE_TRANSFORMS: Record<ToneId, (body: string) => string> = {
-  professional: toProfessional,
-  friendly: toFriendly,
   concise: toConcise,
-  direct: toDirect,
+  friendly: toFriendly,
+  formal: toFormal,
+  apologetic: toApologetic,
 };
 
-function rewriteBody(body: string, tone: ToneId, preserveParagraphs: boolean): string {
-  const transform = TONE_TRANSFORMS[tone];
-  if (!preserveParagraphs) {
-    return transform(body);
+function isRewriteRequest(value: unknown): value is RewriteRequest {
+  if (typeof value !== "object" || value === null) {
+    return false;
   }
-  return body
-    .split(/\n{2,}/)
-    .map((paragraph) => transform(paragraph))
-    .filter((paragraph) => paragraph.length > 0)
-    .join("\n\n");
-}
-
-function resolveOptions(options: ToneRewriterOptions): Required<ToneRewriterOptions> {
-  return {
-    tone: options.tone ?? DEFAULT_REWRITER_OPTIONS.tone,
-    preserveParagraphs: options.preserveParagraphs ?? DEFAULT_REWRITER_OPTIONS.preserveParagraphs,
-  };
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.subject === "string" &&
+    typeof candidate.bodyText === "string" &&
+    typeof candidate.tone === "string"
+  );
 }
 
 /**
- * Rewrites a single normalized email into the requested tone. Never throws:
- * invalid input is reported through a typed error result instead.
+ * Extracts factual anchors that must survive a rewrite: links, emails,
+ * quarters, money amounts, weekdays, calendar dates, relative times, and
+ * proper names.
  */
-export function rewriteEmailTone(
-  input: NormalizedEmail,
-  options: ToneRewriterOptions = {},
-): RewriterResult {
-  if (!isNormalizedEmail(input)) {
+export function extractKeyPoints(text: string): string[] {
+  const points = new Set<string>();
+  const patterns: RegExp[] = [
+    /\bhttps?:\/\/[^\s)]+/gi,
+    /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/gi,
+    /\bQ[1-4]\b/g,
+    /\$\d[\d,]*(?:\.\d+)?\b/g,
+    /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi,
+    /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?\b/gi,
+    /\b(?:today|tonight|tomorrow|yesterday)(?:\s+(?:morning|afternoon|evening|night))?\b/gi,
+  ];
+  for (const pattern of patterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        points.add(match.trim());
+      }
+    }
+  }
+  for (const sentence of splitSentences(text)) {
+    const words = sentence.split(/\s+/);
+    words.forEach((word, index) => {
+      const clean = word.replace(/[^A-Za-z]/g, "");
+      if (index > 0 && /^[A-Z][a-z]+$/.test(clean)) {
+        points.add(clean);
+      }
+    });
+  }
+  return Array.from(points);
+}
+
+function enforceMaxWords(
+  sentences: string[],
+  keyPoints: string[],
+  maxWords?: number,
+): { body: string; truncated: boolean } {
+  const kept = [...sentences];
+  if (!maxWords || countWords(kept.join(" ")) <= maxWords) {
+    return { body: kept.join(" "), truncated: false };
+  }
+  let truncated = false;
+  while (countWords(kept.join(" ")) > maxWords && kept.length > 1) {
+    const last = kept[kept.length - 1];
+    const carriesKeyPoint = keyPoints.some((point) => last.includes(point));
+    if (carriesKeyPoint) {
+      break;
+    }
+    kept.pop();
+    truncated = true;
+  }
+  return { body: kept.join(" "), truncated };
+}
+
+/**
+ * Rewrites a single draft into the requested tone. Never throws: invalid input
+ * and unsupported tones are reported through a typed error result.
+ */
+export function rewriteEmailTone(request: RewriteRequest): RewriterResult {
+  if (!isRewriteRequest(request)) {
     return {
       status: "error",
       code: "unsupported-input",
-      message: "Expected a normalized email with subject, sender, receivedAt, and body.",
+      message: "Expected a draft with subject, bodyText, and tone string fields.",
     };
   }
 
-  const resolved = resolveOptions(options);
-  if (!SUPPORTED_TONES.includes(resolved.tone)) {
+  if (!SUPPORTED_TONES.includes(request.tone)) {
     return {
       status: "error",
       code: "unsupported-tone",
-      message: `Unsupported tone: ${String(resolved.tone)}.`,
+      message: `Unsupported tone: ${String(request.tone)}.`,
     };
   }
 
-  const body = input.body.trim();
+  const body = request.bodyText.trim();
   if (body.length === 0) {
     return {
       status: "error",
       code: "empty-body",
-      message: "Cannot rewrite an email with an empty body.",
+      message: "Cannot rewrite a draft with an empty body.",
     };
   }
 
-  const rewritten = rewriteBody(body, resolved.tone, resolved.preserveParagraphs);
+  const keyPoints = extractKeyPoints(body);
+  const transformed = TONE_TRANSFORMS[request.tone](body);
+  const { body: limited, truncated } = enforceMaxWords(
+    splitSentences(transformed),
+    keyPoints,
+    request.maxWords,
+  );
+  const rewrittenBody = tidy(limited);
 
   return {
     status: "ok",
     rewrite: {
-      tone: resolved.tone,
-      body: rewritten,
-      changed: rewritten !== body,
-      sentenceCount: splitSentences(rewritten).length,
+      tone: request.tone,
+      rewrittenBody,
+      preservedKeyPoints: keyPoints,
+      wordCount: countWords(rewrittenBody),
+      truncated,
+      changed: rewrittenBody !== body,
+      actions: DISABLED_ACTIONS,
       source: {
-        subject: input.subject,
-        sender: input.sender,
-        receivedAt: input.receivedAt,
+        subject: request.subject,
+        bodyText: request.bodyText,
       },
     },
   };
